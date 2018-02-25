@@ -69,23 +69,31 @@ void SectionTitleWidget::mousePressEvent(QMouseEvent* ev)
 		_dragStartPos = ev->pos();
 		return;
 	}
-	QFrame::mousePressEvent(ev);
+    //QFrame::mousePressEvent(ev);
 }
 
 void SectionTitleWidget::mouseReleaseEvent(QMouseEvent* ev)
 {
-	SectionWidget* section = NULL;
+    if (ev->button() != Qt::LeftButton)
+        return;
+
+    SectionWidget* section = NULL;
 	ContainerWidget* cw = findParentContainerWidget(this);
 
-	// Drop contents of FloatingWidget into SectionWidget.
+    QPoint evpos = ev->globalPos();
+    calculateEffectiveMousePosition(cw, evpos);
+    const QPoint gpos = evpos;//ev->globalPos();
+
+    // Drop contents of FloatingWidget into SectionWidget.
 	if (_fw)
 	{
-		SectionWidget* sw = cw->sectionAt(cw->mapFromGlobal(ev->globalPos()));
-		if (sw)
+        //SectionWidget* sw = cw->sectionAt(cw->mapFromGlobal(ev->globalPos()));
+        SectionWidget* sw = cw->sectionAt(gpos/*ev->globalPos()*/);
+        if (sw)
 		{
 			cw->_dropOverlay->setAllowedAreas(ADS_NS::AllAreas);
 			DropArea loc = cw->_dropOverlay->showDropOverlay(sw);
-			if (loc != InvalidDropArea)
+            if (loc != InvalidDropArea)
 			{
 #if !defined(ADS_ANIMATIONS_ENABLED)
 				InternalContentData data;
@@ -115,7 +123,8 @@ void SectionTitleWidget::mouseReleaseEvent(QMouseEvent* ev)
 					_fw->deleteLater();
 					_fw.clear();
 					cw->dropContent(data, sw, loc);
-				});
+                    cw->repaintAllWidgets();
+                });
 				animGroup->addAnimation(moveAnim);
 				animGroup->addAnimation(resizeAnim);
 				animGroup->start(QAbstractAnimation::DeleteWhenStopped);
@@ -126,13 +135,13 @@ void SectionTitleWidget::mouseReleaseEvent(QMouseEvent* ev)
 		else
 		{
 			DropArea dropArea = ADS_NS::InvalidDropArea;
-			if (cw->outerTopDropRect().contains(cw->mapFromGlobal(ev->globalPos())))
+            if (cw->outerTopDropRect().contains(cw->mapFromGlobal(gpos/*ev->globalPos()*/)))
 				dropArea = ADS_NS::TopDropArea;
-			if (cw->outerRightDropRect().contains(cw->mapFromGlobal(ev->globalPos())))
+            if (cw->outerRightDropRect().contains(cw->mapFromGlobal(gpos/*ev->globalPos()*/)))
 				dropArea = ADS_NS::RightDropArea;
-			if (cw->outerBottomDropRect().contains(cw->mapFromGlobal(ev->globalPos())))
+            if (cw->outerBottomDropRect().contains(cw->mapFromGlobal(gpos/*ev->globalPos()*/)))
 				dropArea = ADS_NS::BottomDropArea;
-			if (cw->outerLeftDropRect().contains(cw->mapFromGlobal(ev->globalPos())))
+            if (cw->outerLeftDropRect().contains(cw->mapFromGlobal(gpos/*ev->globalPos()*/)))
 				dropArea = ADS_NS::LeftDropArea;
 
 			if (dropArea != ADS_NS::InvalidDropArea)
@@ -157,21 +166,38 @@ void SectionTitleWidget::mouseReleaseEvent(QMouseEvent* ev)
 			&& (section = findParentSectionWidget(this)) != NULL)
 	{
 		// Find tab under mouse
-		QPoint pos = ev->globalPos();
+        QPoint pos = gpos;//ev->globalPos();
 		pos = section->mapFromGlobal(pos);
 		const int fromIndex = section->indexOfContent(_content);
 		const int toIndex = section->indexOfContentByTitlePos(pos, this);
 		section->moveContent(fromIndex, toIndex);
 	}
 
-	if (!_dragStartPos.isNull())
+    if (!_dragStartPos.isNull())
 		emit clicked();
 
 	// Reset
 	_dragStartPos = QPoint();
 	_tabMoving = false;
 	cw->_dropOverlay->hideDropOverlay();
-	QFrame::mouseReleaseEvent(ev);
+    cw->repaintAllWidgets();
+    QFrame::mouseReleaseEvent(ev);
+}
+
+// Calculate effective mouse pos
+void SectionTitleWidget::calculateEffectiveMousePosition(ContainerWidget* cw, QPoint& evpos)
+{
+    const int mousemargin = 0;
+    QPoint topleft = cw->mapToGlobal(cw->geometry().topLeft());
+    QPoint bottomright = cw->mapToGlobal(cw->geometry().bottomRight());
+    if(evpos.x() < topleft.x()+mousemargin)
+        evpos.setX(topleft.x()+mousemargin);
+    if(evpos.x() > bottomright.x()-mousemargin)
+        evpos.setX(bottomright.x()-mousemargin);
+    if(evpos.y() < topleft.y()+mousemargin)
+        evpos.setY(topleft.y()+mousemargin);
+    if(evpos.y() > bottomright.y()-mousemargin)
+        evpos.setY(bottomright.y()-mousemargin);
 }
 
 void SectionTitleWidget::mouseMoveEvent(QMouseEvent* ev)
@@ -179,52 +205,59 @@ void SectionTitleWidget::mouseMoveEvent(QMouseEvent* ev)
 	ContainerWidget* cw = findParentContainerWidget(this);
 	SectionWidget* section = NULL;
 
-	// Move already existing FloatingWidget
+    QPoint evpos = ev->globalPos();
+    calculateEffectiveMousePosition(cw, evpos);
+    const QPoint gpos = evpos;//ev->globalPos();
+
+    // Move already existing FloatingWidget
 	if (_fw && (ev->buttons() & Qt::LeftButton))
 	{
 		ev->accept();
 
-		const QPoint moveToPos = ev->globalPos() - (_dragStartPos + QPoint(ADS_WINDOW_FRAME_BORDER_WIDTH, ADS_WINDOW_FRAME_BORDER_WIDTH));
-		_fw->move(moveToPos);
 
 		// Show drop indicator
 		if (true)
 		{
 			// Mouse is over a SectionWidget
-			section = cw->sectionAt(cw->mapFromGlobal(QCursor::pos()));
+            //section = cw->sectionAt(cw->mapFromGlobal(QCursor::pos()));
+            section = cw->sectionAt(gpos/*QCursor::pos()*/);
+            //printf("Cur: %d %d.  mapFromGlobal: %d %d \n", QCursor::pos().x(), QCursor::pos().y(), cw->mapFromGlobal(QCursor::pos()).x(), cw->mapFromGlobal(QCursor::pos()).y());
 			if (section)
-			{
+            {//printf("section\n");
 				cw->_dropOverlay->setAllowedAreas(ADS_NS::AllAreas);
 				cw->_dropOverlay->showDropOverlay(section);
 			}
 			// Mouse is at the edge of the ContainerWidget
 			// Top, Right, Bottom, Left
-			else if (cw->outerTopDropRect().contains(cw->mapFromGlobal(QCursor::pos())))
-			{
+            else if (cw->outerTopDropRect().contains(cw->mapFromGlobal(gpos/*QCursor::pos()*/)))
+            {//printf("Top\n");
 				cw->_dropOverlay->setAllowedAreas(ADS_NS::TopDropArea);
 				cw->_dropOverlay->showDropOverlay(cw, cw->outerTopDropRect());
 			}
-			else if (cw->outerRightDropRect().contains(cw->mapFromGlobal(QCursor::pos())))
-			{
+            else if (cw->outerRightDropRect().contains(cw->mapFromGlobal(gpos/*QCursor::pos()*/)))
+            {//printf("Right\n");
 				cw->_dropOverlay->setAllowedAreas(ADS_NS::RightDropArea);
 				cw->_dropOverlay->showDropOverlay(cw, cw->outerRightDropRect());
 			}
-			else if (cw->outerBottomDropRect().contains(cw->mapFromGlobal(QCursor::pos())))
-			{
+            else if (cw->outerBottomDropRect().contains(cw->mapFromGlobal(gpos/*QCursor::pos()*/)))
+            {//printf("Bottom\n");
 				cw->_dropOverlay->setAllowedAreas(ADS_NS::BottomDropArea);
 				cw->_dropOverlay->showDropOverlay(cw, cw->outerBottomDropRect());
 			}
-			else if (cw->outerLeftDropRect().contains(cw->mapFromGlobal(QCursor::pos())))
-			{
+            else if (cw->outerLeftDropRect().contains(cw->mapFromGlobal(gpos/*QCursor::pos()*/)))
+            {//printf("Left\n");
 				cw->_dropOverlay->setAllowedAreas(ADS_NS::LeftDropArea);
 				cw->_dropOverlay->showDropOverlay(cw, cw->outerLeftDropRect());
 			}
 			else
-			{
+            {//printf("Hide\n");
 				cw->_dropOverlay->hideDropOverlay();
 			}
 		}
-		return;
+        cw->repaintAllWidgets();
+        const QPoint moveToPos = gpos - (_dragStartPos + QPoint(ADS_WINDOW_FRAME_BORDER_WIDTH, ADS_WINDOW_FRAME_BORDER_WIDTH));
+        _fw->move(moveToPos);
+        return;
 	}
 	// Begin to drag/float the SectionContent.
 	else if (!_fw && !_dragStartPos.isNull() && (ev->buttons() & Qt::LeftButton)
@@ -245,7 +278,9 @@ void SectionTitleWidget::mouseMoveEvent(QMouseEvent* ev)
 		_fw->resize(section->size());
 		cw->_floatings.append(_fw); // Note: I don't like this...
 
-		const QPoint moveToPos = ev->globalPos() - (_dragStartPos + QPoint(ADS_WINDOW_FRAME_BORDER_WIDTH, ADS_WINDOW_FRAME_BORDER_WIDTH));
+        const QPoint gpos = ev->globalPos();
+        const QPoint moveToPos = gpos - (_dragStartPos + QPoint(ADS_WINDOW_FRAME_BORDER_WIDTH, ADS_WINDOW_FRAME_BORDER_WIDTH));
+
 		_fw->move(moveToPos);
 		_fw->show();
 

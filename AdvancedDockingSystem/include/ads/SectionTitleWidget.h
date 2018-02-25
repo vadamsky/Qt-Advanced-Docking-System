@@ -45,6 +45,8 @@ protected:
 	virtual void mouseReleaseEvent(QMouseEvent* ev);
 	virtual void mouseMoveEvent(QMouseEvent* ev);
 
+    void calculateEffectiveMousePosition(ContainerWidget* cw, QPoint& evpos);
+
 signals:
 	void activeTabChanged();
 	void clicked();

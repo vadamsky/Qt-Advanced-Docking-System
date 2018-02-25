@@ -20,6 +20,9 @@
 
 ADS_NAMESPACE_BEGIN
 
+const int OUTER_DROPBOX_WIDTH_PERCENTAGE = 5;
+const int CONTENTS_MARGINS = 1;
+
 // Static Helper //////////////////////////////////////////////////////
 
 static QSplitter* newSplitter(Qt::Orientation orientation = Qt::Horizontal, QWidget* parent = 0)
@@ -41,7 +44,7 @@ ContainerWidget::ContainerWidget(QWidget *parent) :
 	_dropOverlay(new DropOverlay(this))
 {
 	_mainLayout = new QGridLayout();
-	_mainLayout->setContentsMargins(9, 9, 9, 9);
+    _mainLayout->setContentsMargins(CONTENTS_MARGINS, CONTENTS_MARGINS, CONTENTS_MARGINS, CONTENTS_MARGINS);
 	_mainLayout->setSpacing(0);
 	setLayout(_mainLayout);
 }
@@ -426,28 +429,28 @@ bool ContainerWidget::restoreState(const QByteArray& data)
 QRect ContainerWidget::outerTopDropRect() const
 {
 	QRect r = rect();
-	int h = r.height() / 100 * 5;
+    int h = r.height() / 100 * OUTER_DROPBOX_WIDTH_PERCENTAGE;
 	return QRect(r.left(), r.top(), r.width(), h);
 }
 
 QRect ContainerWidget::outerRightDropRect() const
 {
 	QRect r = rect();
-	int w = r.width() / 100 * 5;
-	return QRect(r.right() - w, r.top(), w, r.height());
+    int w = r.width() / 100 * OUTER_DROPBOX_WIDTH_PERCENTAGE;
+    return QRect(r.right() - w, r.top(), w + 1, r.height());
 }
 
 QRect ContainerWidget::outerBottomDropRect() const
 {
 	QRect r = rect();
-	int h = r.height() / 100 * 5;
-	return QRect(r.left(), r.bottom() - h, r.width(), h);
+    int h = r.height() / 100 * OUTER_DROPBOX_WIDTH_PERCENTAGE;
+    return QRect(r.left(), r.bottom() - h, r.width(), h + 1);
 }
 
 QRect ContainerWidget::outerLeftDropRect() const
 {
 	QRect r = rect();
-	int w = r.width() / 100 * 5;
+    int w = r.width() / 100 * OUTER_DROPBOX_WIDTH_PERCENTAGE;
 	return QRect(r.left(), r.top(), w, r.height());
 }
 
@@ -467,6 +470,24 @@ QList<SectionContent::RefPtr> ContainerWidget::contents() const
 QPointer<DropOverlay> ContainerWidget::dropOverlay() const
 {
 	return _dropOverlay;
+}
+
+void ContainerWidget::updateGeometryOfAllWidgets() const
+{
+    for(auto w : _sections)
+        w->updateGeometry();
+    for(auto w : _floatings)
+        w->updateGeometry();
+}
+
+void ContainerWidget::repaintAllWidgets()
+{
+    repaint();
+    for(auto w : _sections)
+        w->repaint();
+    /*for(auto w : _floatings)
+        w->repaint();*/
+    updateGeometryOfAllWidgets();
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -633,14 +654,20 @@ void ContainerWidget::addSection(SectionWidget* section)
 	_splitter->addWidget(section);
 }
 
-SectionWidget* ContainerWidget::sectionAt(const QPoint& pos) const
+SectionWidget* ContainerWidget::sectionAt(const QPoint& gpos) const
 {
-	const QPoint gpos = mapToGlobal(pos);
+    //const QPoint gpos = mapToGlobal(pos);
+    if (outerLeftDropRect().contains(mapFromGlobal(gpos)) ||
+        outerTopDropRect().contains(mapFromGlobal(gpos)) ||
+        outerRightDropRect().contains(mapFromGlobal(gpos)) ||
+        outerBottomDropRect().contains(mapFromGlobal(gpos)))
+        return 0;
 	for (int i = 0; i < _sections.size(); ++i)
 	{
 		SectionWidget* sw = _sections[i];
 		if (sw->rect().contains(sw->mapFromGlobal(gpos)))
 		{
+            //printf("gpos: %d %d  mapFromGlobal: %d %d  sw: %ld\n", gpos.x(), gpos.y(), sw->mapFromGlobal(gpos).x(), sw->mapFromGlobal(gpos).y(), (long int)sw);
 			return sw;
 		}
 	}
@@ -1113,6 +1140,8 @@ bool ContainerWidget::restoreFloatingWidgets(QDataStream& in, int version, QList
 		floatings.append(fw);
 		data.titleWidget->_fw = fw; // $mfreiholz: Don't look at it :-< It's more than ugly...
 	}
+
+    repaintAllWidgets();
 	return true;
 }
 
@@ -1211,7 +1240,8 @@ bool ContainerWidget::restoreSectionWidgets(QDataStream& in, int version, QSplit
 		qWarning() << "Unknown object type during restore";
 	}
 
-	return true;
+    repaintAllWidgets();
+    return true;
 }
 
 bool ContainerWidget::takeContent(const SectionContent::RefPtr& sc, InternalContentData& data)

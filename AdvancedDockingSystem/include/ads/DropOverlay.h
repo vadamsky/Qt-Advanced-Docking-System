@@ -11,6 +11,7 @@ class QGridLayout;
 
 ADS_NAMESPACE_BEGIN
 class DropOverlayCross;
+class ContainerWidget;
 
 /*!
  * DropOverlay paints a translucent rectangle over another widget. The geometry
@@ -22,7 +23,7 @@ class ADS_EXPORT_API DropOverlay : public QFrame
 	friend class DropOverlayCross;
 
 public:
-	DropOverlay(QWidget* parent);
+    DropOverlay(ContainerWidget* parent);
 	virtual ~DropOverlay();
 
 	void setAllowedAreas(DropAreas areas);
@@ -42,6 +43,8 @@ protected:
 	virtual void hideEvent(QHideEvent* e);
 	virtual void resizeEvent(QResizeEvent* e);
 	virtual void moveEvent(QMoveEvent* e);
+
+    ContainerWidget * _cw;
 
 private:
 	DropAreas _allowedAreas;

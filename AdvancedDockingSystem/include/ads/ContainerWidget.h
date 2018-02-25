@@ -119,6 +119,10 @@ public:
 
 	QPointer<DropOverlay> dropOverlay() const;
 
+    void updateGeometryOfAllWidgets() const;
+
+    void repaintAllWidgets();
+
 private:
 	//
 	// Internal Stuff Begins Here
@@ -127,7 +131,7 @@ private:
 	SectionWidget* newSectionWidget();
 	SectionWidget* dropContent(const InternalContentData& data, SectionWidget* targetSection, DropArea area, bool autoActive = true);
 	void addSection(SectionWidget* section);
-	SectionWidget* sectionAt(const QPoint& pos) const;
+    SectionWidget* sectionAt(const QPoint& gpos) const;
 	SectionWidget* dropContentOuterHelper(QLayout* l, const InternalContentData& data, Qt::Orientation orientation, bool append);
 
 	// Serialization

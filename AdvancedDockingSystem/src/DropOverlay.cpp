@@ -1,4 +1,5 @@
 #include "ads/DropOverlay.h"
+#include "ads/ContainerWidget.h"
 
 #include <QPointer>
 #include <QPaintEvent>
@@ -116,13 +117,15 @@ static QWidget* createDropIndicatorWidget(DropArea dropArea)
 
 ///////////////////////////////////////////////////////////////////////
 
-DropOverlay::DropOverlay(QWidget* parent) :
-	QFrame(parent),
+DropOverlay::DropOverlay(ContainerWidget *parent) :
+    QFrame((QWidget*)parent),
 	_allowedAreas(InvalidDropArea),
 	_cross(new DropOverlayCross(this)),
 	_fullAreaDrop(false),
 	_lastLocation(InvalidDropArea)
 {
+    _cw = parent;
+
 	setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
 	setWindowOpacity(0.2);
 	setWindowTitle("DropOverlay");
@@ -181,7 +184,7 @@ DropArea DropOverlay::showDropOverlay(QWidget* target)
 		DropArea da = cursorLocation();
 		if (da != _lastLocation)
 		{
-			repaint();
+            repaint();
 			_lastLocation = da;
 		}
 		return da;
@@ -190,14 +193,15 @@ DropArea DropOverlay::showDropOverlay(QWidget* target)
 	hideDropOverlay();
 	_fullAreaDrop = false;
 	_target = target;
-	_targetRect = QRect();
+    _targetRect = target->rect();//QRect();
 	_lastLocation = InvalidDropArea;
 
 	// Move it over the target.
 	resize(target->size());
 	move(target->mapToGlobal(target->rect().topLeft()));
 
-	show();
+    show();
+    raise();
 
 	return cursorLocation();
 }
@@ -219,7 +223,9 @@ void DropOverlay::showDropOverlay(QWidget* target, const QRect& targetAreaRect)
 	resize(targetAreaRect.size());
 	move(target->mapToGlobal(QPoint(targetAreaRect.x(), targetAreaRect.y())));
 
-	show();
+    //_cw->repaintAllWidgets();
+    show();
+    raise();
 
 	return;
 }
@@ -240,7 +246,7 @@ void DropOverlay::hideDropOverlay()
 void DropOverlay::paintEvent(QPaintEvent*)
 {
 	QPainter p(this);
-	const QColor areaColor = palette().color(QPalette::Active, QPalette::Highlight);//QColor(0, 100, 255)
+    const QColor areaColor = QColor(0, 100, 255);//palette().color(QPalette::Active, QPalette::Highlight);//QColor(0, 100, 255)
 
 	// Always draw drop-rect over the entire rect()
 	if (_fullAreaDrop)
@@ -397,6 +403,7 @@ void DropOverlayCross::setAreaWidgets(const QHash<DropArea, QWidget*>& widgets)
 DropArea DropOverlayCross::cursorLocation() const
 {
 	const QPoint pos = mapFromGlobal(QCursor::pos());
+    //printf("Cur: %d %d.  mapFromGlobal: %d %d \n", QCursor::pos().x(), QCursor::pos().y(), pos.x(), pos.y());
 	QHashIterator<DropArea, QWidget*> i(_widgets);
 	while (i.hasNext())
 	{
