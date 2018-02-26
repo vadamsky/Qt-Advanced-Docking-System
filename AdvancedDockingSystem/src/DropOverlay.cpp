@@ -22,7 +22,7 @@ static QPixmap createDropIndicatorPixmap(const QPalette& pal, const QSizeF& size
 	const QColor areaBackgroundColor = pal.color(QPalette::Active, QPalette::Highlight).lighter(150);
 
 	QPixmap pm(size.width(), size.height());
-	pm.fill(QColor(0, 0, 0, 0));
+    pm.fill(QColor(255, 255, 255, 255));
 
 	QPainter p(&pm);
 	QPen pen = p.pen();
@@ -127,7 +127,7 @@ DropOverlay::DropOverlay(ContainerWidget *parent) :
     _cw = parent;
 
 	setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
-	setWindowOpacity(0.2);
+    setWindowOpacity(0.25);
 	setWindowTitle("DropOverlay");
 
 	QBoxLayout* l = new QBoxLayout(QBoxLayout::TopToBottom);
@@ -246,16 +246,19 @@ void DropOverlay::hideDropOverlay()
 void DropOverlay::paintEvent(QPaintEvent*)
 {
 	QPainter p(this);
-    const QColor areaColor = QColor(0, 100, 255);//palette().color(QPalette::Active, QPalette::Highlight);//QColor(0, 100, 255)
+    QColor areaColor = palette().color(QPalette::Active, QPalette::Highlight);//QColor(0, 100, 255)
+    //areaColor.setAlpha(64);
 
 	// Always draw drop-rect over the entire rect()
 	if (_fullAreaDrop)
 	{
 		QRect r = rect();
-		p.fillRect(r, QBrush(areaColor, Qt::Dense4Pattern));
-		p.setBrush(QBrush(areaColor));
-		p.drawRect(r);
-		return;
+        //p.fillRect(r, QBrush(areaColor, Qt::Dense4Pattern));
+        //p.setBrush(QBrush(areaColor));
+        //p.drawRect(r);
+        p.setPen(Qt::NoPen);
+        p.fillRect(r, areaColor);
+        return;
 	}
 
 	// Draw rect based on location
@@ -283,10 +286,12 @@ void DropOverlay::paintEvent(QPaintEvent*)
 	}
 	if (!r.isNull())
 	{
-		p.fillRect(r, QBrush(areaColor, Qt::Dense4Pattern));
-		p.setBrush(QBrush(areaColor));
-		p.drawRect(r);
-	}
+        //p.fillRect(r, QBrush(areaColor, Qt::Dense4Pattern));
+        //p.setBrush(QBrush(areaColor));
+        //p.drawRect(r);
+        p.setPen(Qt::NoPen);
+        p.fillRect(r, areaColor);
+    }
 
 	// Draw rect over the entire size + border.
 //	auto r = rect();
@@ -300,7 +305,7 @@ void DropOverlay::paintEvent(QPaintEvent*)
 
 void DropOverlay::showEvent(QShowEvent*)
 {
-	_cross->show();
+    _cross->show();
 }
 
 void DropOverlay::hideEvent(QHideEvent*)
@@ -310,12 +315,12 @@ void DropOverlay::hideEvent(QHideEvent*)
 
 void DropOverlay::resizeEvent(QResizeEvent* e)
 {
-	_cross->resize(e->size());
+    _cross->resize(e->size());
 }
 
 void DropOverlay::moveEvent(QMoveEvent* e)
 {
-	_cross->move(e->pos());
+    _cross->move(e->pos());
 }
 
 ///////////////////////////////////////////////////////////////////////
